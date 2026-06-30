@@ -33,6 +33,10 @@ class StockUpdate(BaseModel):
     change_quantity: int
 
 
+class ThresholdUpdate(BaseModel):
+    threshold: int
+
+
 @app.post("/products", response_model=Product, status_code=201)
 def create_product(product: Product, session: SessionDep):
     """商品を新規追加する"""
@@ -56,6 +60,23 @@ def update_stock(product_id: int, body: StockUpdate, session: SessionDep):
     if not product:
         raise HTTPException(status_code=404, detail="商品が見つかりません")
     product.stock_quantity += body.change_quantity
+    session.add(product)
+    session.commit()
+    session.refresh(product)
+    return product
+
+
+@app.put("/products/{product_id}/threshold", response_model=Product)
+def update_threshold(product_id: int, body: ThresholdUpdate, session: SessionDep):
+    """指定した商品のしきい値を更新する"""
+    if body.threshold < 0:
+        raise HTTPException(status_code=400, detail="しきい値は0以上で指定してください")
+
+    product = session.get(Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="商品が見つかりません")
+
+    product.threshold = body.threshold
     session.add(product)
     session.commit()
     session.refresh(product)

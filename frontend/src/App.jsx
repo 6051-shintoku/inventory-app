@@ -4,6 +4,8 @@ const API_BASE = 'http://localhost:8000'
 
 export default function App() {
   const [products, setProducts] = useState([])
+  const [thresholdEdits, setThresholdEdits] = useState({})
+  const [updatingThresholdIds, setUpdatingThresholdIds] = useState({})
   const [form, setForm] = useState({
     name: '',
     category: '',
@@ -21,6 +23,13 @@ export default function App() {
       if (!res.ok) throw new Error('商品の取得に失敗しました')
       const data = await res.json()
       setProducts(data)
+      setThresholdEdits((prev) => {
+        const next = {}
+        data.forEach((product) => {
+          next[product.id] = prev[product.id] ?? product.threshold
+        })
+        return next
+      })
     } catch (e) {
       setError(e.message)
     }
@@ -75,6 +84,49 @@ export default function App() {
       await fetchProducts()
     } catch (e) {
       setError(e.message)
+    }
+  }
+
+  const handleThresholdInputChange = (productId, value) => {
+    setThresholdEdits((prev) => ({
+      ...prev,
+      [productId]: value,
+    }))
+  }
+
+  const handleThresholdUpdate = async (productId) => {
+    setError('')
+    const rawThreshold = thresholdEdits[productId]
+    const threshold = Number(rawThreshold)
+
+    if (rawThreshold === '' || !Number.isInteger(threshold) || threshold < 0) {
+      setError('しきい値は0以上の整数で入力してください')
+      return
+    }
+
+    setUpdatingThresholdIds((prev) => ({
+      ...prev,
+      [productId]: true,
+    }))
+
+    try {
+      const res = await fetch(`${API_BASE}/products/${productId}/threshold`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threshold }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || 'しきい値の更新に失敗しました')
+      }
+      await fetchProducts()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setUpdatingThresholdIds((prev) => ({
+        ...prev,
+        [productId]: false,
+      }))
     }
   }
 
@@ -196,7 +248,26 @@ export default function App() {
                         {p.stock_quantity}
                       </strong>
                     </td>
-                    <td>{p.threshold}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          value={thresholdEdits[p.id] ?? p.threshold}
+                          onChange={(e) => handleThresholdInputChange(p.id, e.target.value)}
+                          style={{ margin: 0, maxWidth: '6.5rem' }}
+                        />
+                        <button
+                          onClick={() => handleThresholdUpdate(p.id)}
+                          className="secondary"
+                          style={{ margin: 0, padding: '0.25rem 0.75rem' }}
+                          aria-busy={updatingThresholdIds[p.id] ? 'true' : undefined}
+                          disabled={Boolean(updatingThresholdIds[p.id])}
+                        >
+                          更新
+                        </button>
+                      </div>
+                    </td>
                     <td>
                       {p.stock_quantity <= p.threshold ? (
                         <span style={{ color: 'var(--pico-color-red-500, #e53e3e)' }}>⚠️ 発注推奨</span>
