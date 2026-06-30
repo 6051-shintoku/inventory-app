@@ -40,6 +40,10 @@
 - `timestamp`: 文字列または日時 (履歴日時)
 - `action_type`: 文字列 (「入庫」「出庫」「新規登録」など)
 
+### 3. StockLog API
+- `GET /stocklogs`: 入出庫履歴を新しい順で取得する
+- `GET /stocklogs?product_id=1`: 特定商品の履歴だけを取得する
+
 ---
 
 ## 📂 ディレクトリ構成（例）
