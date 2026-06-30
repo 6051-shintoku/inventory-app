@@ -130,9 +130,27 @@ export default function App() {
     }
   }
 
+  const lowStockProducts = products.filter((product) => product.stock_quantity <= product.threshold)
+  const lowStockProductIds = new Set(lowStockProducts.map((product) => product.id))
+  const lowStockCount = lowStockProducts.length
+
   return (
     <main className="container">
       <h1>📦 在庫管理システム</h1>
+
+      {lowStockCount > 0 && (
+        <article
+          aria-label="在庫不足アラート"
+          style={{
+            backgroundColor: 'var(--pico-del-background-color, #fff5f5)',
+            border: '1px solid var(--pico-del-color, #e53e3e)',
+            color: 'var(--pico-del-color, #e53e3e)',
+            padding: '0.75rem 1rem',
+          }}
+        >
+          ⚠️ 在庫が不足している商品が {lowStockCount} 件あります
+        </article>
+      )}
 
       {error && (
         <article aria-label="エラー" style={{ backgroundColor: 'var(--pico-del-color)', color: '#fff', padding: '0.5rem 1rem' }}>
@@ -233,68 +251,81 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.id}</td>
-                    <td>{p.name}</td>
-                    <td>{p.category}</td>
-                    <td>¥{p.price.toLocaleString()}</td>
-                    <td>
-                      <strong
-                        style={{
-                          color: p.stock_quantity <= p.threshold ? 'var(--pico-color-red-500, #e53e3e)' : 'inherit',
-                        }}
-                      >
-                        {p.stock_quantity}
-                      </strong>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <input
-                          type="number"
-                          min="0"
-                          value={thresholdEdits[p.id] ?? p.threshold}
-                          onChange={(e) => handleThresholdInputChange(p.id, e.target.value)}
-                          style={{ margin: 0, maxWidth: '6.5rem' }}
-                        />
-                        <button
-                          onClick={() => handleThresholdUpdate(p.id)}
-                          className="secondary"
-                          style={{ margin: 0, padding: '0.25rem 0.75rem' }}
-                          aria-busy={updatingThresholdIds[p.id] ? 'true' : undefined}
-                          disabled={Boolean(updatingThresholdIds[p.id])}
+                {products.map((p) => {
+                  const isLowStock = lowStockProductIds.has(p.id)
+
+                  return (
+                    <tr
+                      key={p.id}
+                      style={
+                        isLowStock
+                          ? {
+                              backgroundColor: 'var(--pico-del-background-color, #fff5f5)',
+                            }
+                          : undefined
+                      }
+                    >
+                      <td>{p.id}</td>
+                      <td>{p.name}</td>
+                      <td>{p.category}</td>
+                      <td>¥{p.price.toLocaleString()}</td>
+                      <td>
+                        <strong
+                          style={{
+                            color: isLowStock ? 'var(--pico-color-red-500, #e53e3e)' : 'inherit',
+                          }}
                         >
-                          更新
-                        </button>
-                      </div>
-                    </td>
-                    <td>
-                      {p.stock_quantity <= p.threshold ? (
-                        <span style={{ color: 'var(--pico-color-red-500, #e53e3e)' }}>⚠️ 発注推奨</span>
-                      ) : (
-                        <span style={{ color: 'green' }}>✅ 正常</span>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <button
-                          onClick={() => handleStock(p.id, 1)}
-                          style={{ padding: '0.25rem 0.75rem', margin: 0 }}
-                        >
-                          ＋
-                        </button>
-                        <button
-                          onClick={() => handleStock(p.id, -1)}
-                          className="secondary"
-                          style={{ padding: '0.25rem 0.75rem', margin: 0 }}
-                          disabled={p.stock_quantity <= 0}
-                        >
-                          ー
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {p.stock_quantity}
+                        </strong>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <input
+                            type="number"
+                            min="0"
+                            value={thresholdEdits[p.id] ?? p.threshold}
+                            onChange={(e) => handleThresholdInputChange(p.id, e.target.value)}
+                            style={{ margin: 0, maxWidth: '6.5rem' }}
+                          />
+                          <button
+                            onClick={() => handleThresholdUpdate(p.id)}
+                            className="secondary"
+                            style={{ margin: 0, padding: '0.25rem 0.75rem' }}
+                            aria-busy={updatingThresholdIds[p.id] ? 'true' : undefined}
+                            disabled={Boolean(updatingThresholdIds[p.id])}
+                          >
+                            更新
+                          </button>
+                        </div>
+                      </td>
+                      <td>
+                        {isLowStock ? (
+                          <span style={{ color: 'var(--pico-color-red-500, #e53e3e)' }}>⚠️ 発注推奨</span>
+                        ) : (
+                          <span style={{ color: 'green' }}>✅ 正常</span>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleStock(p.id, 1)}
+                            style={{ padding: '0.25rem 0.75rem', margin: 0 }}
+                          >
+                            ＋
+                          </button>
+                          <button
+                            onClick={() => handleStock(p.id, -1)}
+                            className="secondary"
+                            style={{ padding: '0.25rem 0.75rem', margin: 0 }}
+                            disabled={p.stock_quantity <= 0}
+                          >
+                            ー
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </figure>
